@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="UTF-8">
+	<title>Req GET & POST</title>
+</head>
+<body>
+	{% if message %}
+	<p>{{ message }}</p>
+	{% endif %}
+	<form action="/login" method="POST">
+		<input type="email" name="mail" id="login-mail" placeholder="exemple@test.fr">
+		<input type="password" name="password" id="login-password" placeholder="*********">
+		<button type="submit">Valider</button>
+	</form>
+</body>
+</html>
