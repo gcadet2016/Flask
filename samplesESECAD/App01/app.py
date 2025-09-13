@@ -4,6 +4,7 @@ from datetime import datetime
 from flask import render_template
 
 from mysql import connector
+import os
 
 app = Flask(__name__)
 
@@ -11,8 +12,10 @@ app = Flask(__name__)
 def routePrincipale():
 	message = 'Mon application Web Flask'
 	return render_template('main.html',
-	contenu=message,
-	titre='Page principale')
+		contenu=message,
+		titre='Page principale',
+		is_connected=True
+	)
 
 @app.route('/date')
 def routeDate():
@@ -23,10 +26,11 @@ def routeDate():
 
 @app.route('/users')
 def routeUsers():
+	pwd = os.environ.get('MYSQL_FLASK_PWD')
 	db = connector.connect(
-		user='root',
-		password='root',
-		database='FlaskSql',
+		user='flaskusr',
+		password=pwd,
+		database='flaskSql',
 		host='localhost'
 	)
 	#print(type(connector.connect))
@@ -43,6 +47,8 @@ def routeUsers():
 	db.close()
 
 	return render_template('main.html',
-	utilisateur_bdd_nom=nom,
-	utilisateur_bdd_prenom=prenom,
-	titre='Utilisateurs')
+		utilisateur_bdd_nom=nom,
+		utilisateur_bdd_prenom=prenom,
+		titre='Utilisateurs',
+		is_connected=True
+	)

@@ -1,40 +1,31 @@
-<body>
 	<nav class="navbar navbar-expand-lg navbar-light bg-light">
-		<a class="navbar-brand" href="/">App</a>
+		<a class="navbar-brand" href="#">Titre ou logo</a>
 		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
 			<span class="navbar-toggler-icon"></span>
 		</button>
 		<div class="collapse navbar-collapse" id="navbarText">
 			<ul class="navbar-nav mr-auto">
-			<li class="nav-item">
-				<a class="nav-link" href="/date">Date</a>
+			<li class="nav-item active">
+				<a class="nav-link" href="#">Accueil <span class="sr-only">(current)</span></a>
 			</li>
 			<li class="nav-item">
-				<a class="nav-link" href="/users">Utilisateurs</a>
+				<a class="nav-link" href="#">Bouton 1</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="#">Bouton 2</a>
 			</li>
 			{% if is_connected == True %}
 			<li class="nav-item">
-				<a class="nav-link" href="#">Mon compte</a>
+				<a class="nav-link" href="/logout">Se déconnecter</a>
+			</li>
+			{% else %}
+			<li class="nav-item">
+				<a class="nav-link" href="/signin">Se connecter</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="/signup">S'inscrire</a>
 			</li>
 			{% endif %}
 			</ul>
 		</div>
 	</nav>
-	
-	<div>
-		{% if titre == 'Utilisateurs' %}
-		<table>
-			<tr>
-				<th>Nom</th>
-				<th>Prénom</th>
-			</tr>
-			<tr>
-				<td>{{ utilisateur_bdd_nom }}</td>
-				<td>{{ utilisateur_bdd_prenom }}</td>
-			</tr>
-		</table>
-		{% else %}
-		{{ contenu }}
-		{% endif %}
-	</div>
-</body>
