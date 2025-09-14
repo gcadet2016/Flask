@@ -2,12 +2,24 @@
 
 	{%include "navbar.html" %}
 	
-	<div>
+	<div id="main-content" class="container mt-4">
 		<div class="titre-paragraphe">
-			<h1>{{ titre }}</h1>
+			<h1>{{ titre_page }}</h1>
 		</div>
 		<div>
+			{% if htmlContent %}
+			{{ htmlContent|safe }}
+			{% endif %}
+		</div>
+		<div>
+			{% if message %}
 			<p>{{ message }}</p>
+			{% endif %}
+		</div>
+		<div class="error">
+			{% if error %}
+			<p style="color: red;">{{ error }}</p>
+			{% endif %}
 		</div>
 	</div>
 </body>

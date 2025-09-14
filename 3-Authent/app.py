@@ -3,7 +3,7 @@
 #   flask run
 # Browse to http://127.0.0.1:5000
 
-from flask import Flask, redirect, url_for, request
+from flask import Flask, redirect, url_for, request, session
 from mysql import connector
 from sqlConnect import connectSQL, closeSQLConnection
 from flask import render_template
@@ -11,20 +11,41 @@ import os
 
 # Déclaration de l'application Web Flask
 app = Flask(__name__)
-isConnected = False
+app.secret_key = os.environ.get('FLASK_SECRET_KEY')  
+# app.secret_key: utilisée pour sécuriser les données de session.
+# Elle permet de signer et chiffrer les cookies de session, afin d’empêcher leur modification ou falsification par les utilisateurs.
+# Sans clé secrète, les sessions ne sont pas sûres et peuvent être compromises.
 connectedUsersList = []
 
 @app.route('/', methods=['GET'])
 def home():
-    global isConnected, connectedUsersList
-    return render_template('main.html',
-        titre='Page d\'accueil',
-        message = f'Bonjour {connectedUsersList[0]}' if isConnected else 'Bonjour utilisateur anonyme',
-        is_connected = isConnected)
+    global connectedUsersList
+    isConnected = session.get('isConnected', False)
+    userEmail = session.get('userEmail', None)
 
-@app.route('/signin', methods=['GET', 'POST'])
-def signin():
-    global isConnected, connectedUsersList
+    if isConnected and userEmail and userEmail not in connectedUsersList:
+        # Ce cas de figure ne devrait pas arriver normalement
+        # Envisager une gestion d'erreur plus robuste 
+        # ou rediriger vers la page de logout
+        connectedUsersList.append(userEmail)
+
+    return render_template('home.html',
+        titre_page='Page d\'accueil',
+        message = f'Bonjour {userEmail}' if isConnected else 'Bonjour utilisateur anonyme',
+        active_page = 'home',
+        is_connected=isConnected
+    )
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    global connectedUsersList
+    isConnected = session.get('isConnected', False)
+    userEmail = session.get('userEmail', None)
+
+    if isConnected:
+        # Utilisateur déjà connecté
+        # Envisager une gestion d'erreur plus robuste
+        return redirect(url_for('home'))
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -37,21 +58,33 @@ def signin():
         user = mabdd.fetchone()
         closeSQLConnection(db)
         if user:
-            isConnected = True
+            session['isConnected'] = True
+            session['userEmail'] = email
             connectedUsersList.append(email)
             return redirect(url_for('home'))
         else:
-            return render_template('sign-in.html',
-                titre='Page de connexion',
-                error='Identifiants invalides. Veuillez réessayer.',
-                is_connected = isConnected)
-    return render_template('sign-in.html',
-        titre='Page de connexion',
-        is_connected = isConnected)
+            return render_template('login.html',
+                titre_page='Page de connexion',
+                error='Identifiants invalides.\nVeuillez réessayer.',
+                active_page = 'login',
+                is_connected = isConnected
+            )
+    # request method == 'GET' et utilisateur non connecté
+    return render_template('login.html',
+        titre_page='Page de connexion',
+        active_page = 'login',
+        is_connected = isConnected
+    )
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    global isConnected, connectedUsersList
+    global connectedUsersList
+    isConnected = session.get('isConnected', False)
+    userEmail = session.get('userEmail', None)
+    if isConnected:
+        # Utilisateur déjà connecté
+        # Envisager une gestion d'erreur plus robuste
+        return redirect(url_for('home'))
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
@@ -59,9 +92,11 @@ def signup():
         confirm_password = request.form.get('confirm_password')
         if password != confirm_password:
             return render_template('sign-up.html',
-                titre='Page d\'inscription',
-                error='Les mots de passe ne correspondent pas. Veuillez réessayer.',
-                is_connected = isConnected)
+                titre_page='Page d\'inscription',
+                error='Les mots de passe ne correspondent pas.\nVeuillez réessayer.',
+                active_page = 'signup',
+                is_connected = isConnected
+            )
         SQLsecretKey = os.environ.get('MYSQL_KEY')
         # Enregistrement des nouveaux utilisateurs dans SQL
         db = connectSQL()
@@ -71,54 +106,85 @@ def signup():
         mabdd.execute(req_insert, data)
         db.commit()
         closeSQLConnection(db)
-        connectedUsersList.append(email)
-        isConnected = True
+        # Ici il faut afficher un bouton login !!!
+        # connectedUsersList.append(email)
+        # isConnected = True
         return redirect(url_for('home'))
     # request method == 'GET'
     return render_template('sign-up.html',
-        titre='Page d\'inscription',
-        is_connected = isConnected)
+        titre_page='Page d\'inscription',
+        active_page = 'signup',
+        is_connected = isConnected
+    )
 
 @app.route('/logout', methods=['GET'])
 def logout():
-    global isConnected, connectedUsersList
-    isConnected = False
-    connectedUsersList = []
+    global connectedUsersList
+    session['isConnected'] = False
+    # remove session['userEmail'] from
+    connectedUsersList.remove(session.get('userEmail'))
+    session.pop('userEmail', None)
     return redirect(url_for('home'))
 
-@app.route('/readSQL')
+@app.route('/userList', methods=['GET'])
 def routeReadSql():
-    db = connectSQL()
-    mabdd = db.cursor()
+    isConnected = session.get('isConnected', False)
+    if isConnected:
+        db = connectSQL()
+        mabdd = db.cursor()
+        req_users ="SELECT * FROM users;"
+        mabdd.execute(req_users)
+        result = mabdd.fetchall()
 
-    req_users ="SELECT * FROM users;"
-    mabdd.execute(req_users)
+        htmlContent = "<div class='userList'>"
+        htmlContent += "<h2>Liste des utilisateurs enregistrés dans la base de données SQL:</h2>"
+        htmlContent += "<ul>"
+        for row in result:
+            htmlContent += f'<li>{str(row)}</li>'
 
-    result = mabdd.fetchall()
+        closeSQLConnection(db)
+        htmlContent += "</ul>"
 
-    ligne_a_retourner = ""
-    for row in result:
-        ligne_a_retourner += str(row) + "\n"
+        # Ajouter la liste des utilisateurs connectés
+        htmlContent += "<h2>Utilisateurs connectés:</h2>"
+        htmlContent += "<ul>"
+        for user in connectedUsersList:
+            htmlContent += f"<li>{user}</li>"
+        htmlContent += "</ul>"
 
-    closeSQLConnection(db)
-    
-    return ligne_a_retourner
+        htmlContent += "</div>"
 
-@app.route('/insertSQL', methods=['POST'])
-def routeInsertSql():
-    # Insert a new user in MySQL database
-    db = connectSQL()
-    mabdd = db.cursor()
+        return render_template('userList.html',
+            titre_page='Liste des utilisateurs',
+            htmlContent=htmlContent,
+            active_page = 'userList',
+            is_connected=isConnected
+        )
+    else:
+        htmlContent = ''
+        msg = "Vous devez être connecté pour accéder à cette page."
+        return render_template('userList.html',
+            titre_page='Liste des utilisateurs',
+            error=msg,
+            active_page = 'userList',
+            is_connected=isConnected
+        ), 403
 
-    # Récupérer les données du formulaire
-    # username = request.form.get('username')
-    # email = request.form.get('email')
+# @app.route('/insertSQL', methods=['POST'])
+# def routeInsertSql():
+#     # Insert a new user in MySQL database
+#     db = connectSQL()
+#     mabdd = db.cursor()
 
-    # Insérer les données dans la base de données
-    req_insert = "INSERT INTO users (nom, mail, password) VALUES (%s, %s, %s)"
-    data = ('Lu', 'Dovic', 'dovic.lu@mail.fr')
-    mabdd.execute(req_insert, data)
+#     # Récupérer les données du formulaire
+#     # username = request.form.get('username')
+#     # email = request.form.get('email')
 
-    db.commit()
-    closeSQLConnection(db)
-    return "Données insérées avec succès !"
+#     # Insérer les données dans la base de données
+#     req_insert = "INSERT INTO users (nom, mail, password) VALUES (%s, %s, %s)"
+#     data = ('Lu', 'Dovic', 'dovic.lu@mail.fr')
+#     mabdd.execute(req_insert, data)
+
+#     db.commit()
+#     closeSQLConnection(db)
+#     return "Données insérées avec succès !"

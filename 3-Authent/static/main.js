@@ -1,1 +1,0 @@
-document.body.innerHTML += '<p>Paragraphe généré à partir de code JavaScript.</p>'
