@@ -1,0 +1,25 @@
+<body>
+
+	{%include "navbar.html" %}
+	
+	<div id="main-content" class="container mt-4">
+		<div class="titre-paragraphe">
+			<h1>{{ titre_page }}</h1>
+		</div>
+		<div>
+			{% if message %}
+			<p>{{ message }}</p>
+			{% endif %}
+		</div>
+
+		{% if htmlContent %}
+		{{ htmlContent|safe }}
+		{% endif %}
+
+		{% if errorDiv %}
+		{{ errorDiv|safe }}
+		{% endif %}
+	</div>
+
+	{% include "footer.html" %}
+</body>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+	<meta charset="UTF-8">
+	<title>Presentation templates</title>
+</head>
+<body>
+	<div>
+		<div>
+			<h1>{{ mon_titre }}</h1>
+		</div>
+		<div>
+			<p>{{ mon_paragraphe }}</p>
+		</div>
+		<div>
+			<p>
+				{% if nombre < 10  %}
+					Ce nombre est inférieur strict à 10.
+				{% else %}
+					C'est un nombre entre 10 et l'infini.
+				{% endif %}
+			</p>
+		</div>
+	</div>
+</body>
+</html>

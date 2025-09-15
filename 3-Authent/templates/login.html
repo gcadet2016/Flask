@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+{%include "head.html" %}
+
+<body>
+    {%include "navbar.html" %}
+    <div class="login-dialog" role="document">
+        <div class="login-content">
+            <div class="login-body">
+                <div class="column" id="main">
+                    <h1>Connexion</h1>
+                    <h3>Connectez-vous avec votre email et votre mot de passe.</h3>
+                    <form method="POST">
+                        <!-- <div class="form-group">
+                                <label for="exampleInputName">Name</label>
+                                <input type="name" class="form-control" id="exampleInputName" placeholder="Name">
+                            </div> -->
+                        <div class="form-group">
+                            <label for="exampleInputEmail1">E-mail </label>
+                            <input type="email" class="form-control" id="exampleInputEmail1"
+                                aria-describedby="emailHelp" placeholder="E-mail" name="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="exampleInputPassword1">Mot de passe</label>
+                            <input type="password" class="form-control" id="exampleInputPassword1"
+                                placeholder="Mot de passe" name="password">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Se connecter</button>
+                    </form>
+                    <div class="error">
+                        {% if error %}
+                        <p style="color: red;">{{ error }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <svg width="67px" height="578px" viewBox="0 0 67 578" version="1.1"
+                        xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <!-- Generator: Sketch 53.2 (72643) - https://sketchapp.com -->
+                        <title>Path</title>
+                        <desc>Created with Sketch.</desc>
+                        <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                            <path
+                                d="M11.3847656,-5.68434189e-14 C-7.44726562,36.7213542 5.14322917,126.757812 49.15625,270.109375 C70.9827986,341.199016 54.8877465,443.829224 0.87109375,578 L67,578 L67,-5.68434189e-14 L11.3847656,-5.68434189e-14 Z"
+                                id="Path" fill="#F9BC35"></path>
+                        </g>
+                    </svg>
+                </div>
+                <div class="column" id="secondary">
+                    <div class="sec-content">
+                        <h2>Nouvel utilisateur!</h2>
+                        <h3>Enregistrez-vous pour accéder à nos offres</h3>
+                        <button type="button" class="btn btn-primary" onclick="window.location.href='/signup'">S'inscrire</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+{% include "script.html" %}
+</html>
