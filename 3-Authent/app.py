@@ -1,11 +1,11 @@
 # Exéction:
-#   cd 2-BasicFlask
+#   cd 3-Authent
 #   flask run
 # Browse to http://127.0.0.1:5000
 
 from flask import Flask, redirect, url_for, request, session
 from mysql import connector
-from sqlConnect import connectSQL, closeSQLConnection
+from sqlConnect import SQLdb
 from flask import render_template
 import os
 
@@ -22,6 +22,7 @@ def home():
     global connectedUsersList
     isConnected = session.get('isConnected', False)
     userEmail = session.get('userEmail', None)
+    homeHtmlContent = ''
 
     if isConnected and userEmail and userEmail not in connectedUsersList:
         # Ce cas de figure ne devrait pas arriver normalement
@@ -29,9 +30,87 @@ def home():
         # ou rediriger vers la page de logout
         connectedUsersList.append(userEmail)
 
+    if not isConnected:
+        # Utilisateur non connecté: afficher la page d'accueil avec les prérequis
+        # et les vérifications
+
+        # Verifier que la base de données est accessible
+        dbAccessible = False
+        try:
+            sqlDB = SQLdb()
+            db = sqlDB.connectSQL()
+            dbAccessible = True
+        except connector.Error as err:
+            dbAccessible = False
+            print(f"Erreur de connexion à la base de données: {err}")
+            errMsg = str(err)
+
+        # Vérifier l'existance des variables d'environnement
+        missingEnvVars = []
+        if not os.environ.get('MYSQL_FLASK_PWD'):
+            missingEnvVars.append('MYSQL_FLASK_PWD')
+        if not os.environ.get('MYSQL_KEY'):
+            missingEnvVars.append('MYSQL_KEY')
+        if not os.environ.get('FLASK_SECRET_KEY'):
+            missingEnvVars.append('FLASK_SECRET_KEY')
+
+        homeHtmlContent = '''
+        <div class="home-content">
+            <h2>Bienvenue sur notre site</h2>
+            <p>Prerequis pour utiliser ce site :</p>
+            <ul>
+                <li>La base de données MySQL doit être opérationnelle</li>
+                <li>3 variables d'environnement doivent être configurées :</li>
+                <ul>
+                    <li>MYSQL_FLASK_PWD=mot de passe de l'utilisateur SQL 'flaskusr'</li>
+                    <li>MYSQL_KEY=clé secrète pour cryptage dans la base de données</li>
+                    <li>FLASK_SECRET_KEY=clé secrète pour les sessions de l'application Flask</li>
+                </ul>
+            </ul>
+            <p>Les valeurs des variables d'environnement MYSQL_KEY et FLASK_SECRET_KEY peuvent être générées par la commande bash:  openssl rand -base64 32</p>
+            <p>Vérification des prérequis :</p>
+        '''
+        if dbAccessible:
+            homeHtmlContent += '''
+            <div class="alert alert-success" role="alert">
+                Le test de connexion à la base de données MySQL a réussi !
+            </div>
+            '''
+        else:
+            homeHtmlContent += f'''
+            <div class="alert alert-danger" role="alert">
+                Le test de connexion à la base de données MySQL a échoué !<br>
+                Veuillez vérifier que le serveur MySQL est opérationnel et que la variable d'environnement MYSQL_FLASK_PWD est correctement configurées.<br>
+                Détails de l'erreur : {errMsg}
+            </div>
+            '''
+        if len(missingEnvVars) == 0:
+            homeHtmlContent += '''
+            <div class="alert alert-success" role="alert">
+                Toutes les variables d'environnement requises sont configurées.
+            </div>
+            '''
+        else:
+            homeHtmlContent += f'''
+            <div class="alert alert-danger" role="alert">
+                Les variables d'environnement suivantes sont manquantes : {', '.join(missingEnvVars)}.<br>
+                Veuillez les configurer avant d'utiliser l'application.
+            </div>
+            '''
+        homeHtmlContent += '</div>'
+
+        # errorDiv = ''
+        # if not isConnected:
+        #     errorDiv += '''
+        #         <div class="alert alert-danger" role="alert">
+        #             <p>The error message goes here</p>
+        #         </div>
+        #     '''
     return render_template('home.html',
         titre_page='Page d\'accueil',
         message = f'Bonjour {userEmail}' if isConnected else 'Bonjour utilisateur anonyme',
+        htmlContent = homeHtmlContent,
+        # errorDiv = errorDiv,
         active_page = 'home',
         is_connected=isConnected
     )
@@ -51,12 +130,12 @@ def login():
         password = request.form.get('password')
         SQLsecretKey = os.environ.get('MYSQL_KEY')
         # Vérification des identifiants dans SQL
-        db = connectSQL()
+        sqlDB = SQLdb()
+        db = sqlDB.connectSQL()
         mabdd = db.cursor()
         req = "SELECT * FROM users WHERE mail = %s AND password = AES_ENCRYPT(%s, %s)"
         mabdd.execute(req, (email, password, SQLsecretKey))
         user = mabdd.fetchone()
-        closeSQLConnection(db)
         if user:
             session['isConnected'] = True
             session['userEmail'] = email
@@ -99,13 +178,14 @@ def signup():
             )
         SQLsecretKey = os.environ.get('MYSQL_KEY')
         # Enregistrement des nouveaux utilisateurs dans SQL
-        db = connectSQL()
+        sqlDB = SQLdb()
+        db = sqlDB.connectSQL()
         mabdd = db.cursor()
         req_insert = "INSERT INTO users (nom, prenom, mail, password) VALUES (%s, %s, %s, AES_ENCRYPT(%s, %s))"
         data = (name, '', email, password, SQLsecretKey)
         mabdd.execute(req_insert, data)
         db.commit()
-        closeSQLConnection(db)
+
         # Ici il faut afficher un bouton login !!!
         # connectedUsersList.append(email)
         # isConnected = True
@@ -130,7 +210,8 @@ def logout():
 def routeReadSql():
     isConnected = session.get('isConnected', False)
     if isConnected:
-        db = connectSQL()
+        sqlDB = SQLdb()
+        db = sqlDB.connectSQL()
         mabdd = db.cursor()
         req_users ="SELECT * FROM users;"
         mabdd.execute(req_users)
@@ -142,7 +223,6 @@ def routeReadSql():
         for row in result:
             htmlContent += f'<li>{str(row)}</li>'
 
-        closeSQLConnection(db)
         htmlContent += "</ul>"
 
         # Ajouter la liste des utilisateurs connectés
@@ -161,30 +241,43 @@ def routeReadSql():
             is_connected=isConnected
         )
     else:
-        htmlContent = ''
-        msg = "Vous devez être connecté pour accéder à cette page."
+        errorDiv = '''
+            <div class="alert alert-danger" role="alert">
+                <p>Authentification requise pour accéder à la liste des utilisateurs.</p>
+            </div>
+        '''
         return render_template('userList.html',
             titre_page='Liste des utilisateurs',
-            error=msg,
+            errorDiv=errorDiv,
             active_page = 'userList',
             is_connected=isConnected
         ), 403
 
-# @app.route('/insertSQL', methods=['POST'])
-# def routeInsertSql():
-#     # Insert a new user in MySQL database
-#     db = connectSQL()
-#     mabdd = db.cursor()
+@app.errorhandler(404)
+def route404(erreur):
+    errorDiv = '''
+        <div class="alert alert-danger" role="alert">
+            <p>La page demandée n'existe pas.</p>
+        </div>
+    '''
+    return render_template('home.html',
+		titre_page='Erreur 404',
+		errorDiv=errorDiv,
+        active_page = 'home',
+        is_connected = session.get('isConnected', False)
+	), 404
 
-#     # Récupérer les données du formulaire
-#     # username = request.form.get('username')
-#     # email = request.form.get('email')
-
-#     # Insérer les données dans la base de données
-#     req_insert = "INSERT INTO users (nom, mail, password) VALUES (%s, %s, %s)"
-#     data = ('Lu', 'Dovic', 'dovic.lu@mail.fr')
-#     mabdd.execute(req_insert, data)
-
-#     db.commit()
-#     closeSQLConnection(db)
-#     return "Données insérées avec succès !"
+@app.errorhandler(500)
+def route500(erreur):
+    errorDiv = '''
+        <div class="alert alert-danger" role="alert">
+            <p>Une erreur interne est survenue (500)</p>
+            <p>Veuillez vérifier l'accès à la base de données et les variables d'environnement</p>
+        </div>
+    '''
+    return render_template('home.html',
+		titre_page='Erreur 500',
+		errorDiv=errorDiv,
+        active_page = 'home',
+        is_connected = session.get('isConnected', False)
+	), 500

@@ -7,19 +7,19 @@
 			<h1>{{ titre_page }}</h1>
 		</div>
 		<div>
-			{% if htmlContent %}
-			{{ htmlContent|safe }}
-			{% endif %}
-		</div>
-		<div>
 			{% if message %}
 			<p>{{ message }}</p>
 			{% endif %}
 		</div>
-		<div class="error">
-			{% if error %}
-			<p style="color: red;">{{ error }}</p>
-			{% endif %}
-		</div>
+
+		{% if htmlContent %}
+		{{ htmlContent|safe }}
+		{% endif %}
+
+		{% if errorDiv %}
+		{{ errorDiv|safe }}
+		{% endif %}
 	</div>
+
+	{% include "footer.html" %}
 </body>
